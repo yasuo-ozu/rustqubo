@@ -20,7 +20,7 @@ annealers = { path = "./annealers", version = "0.1.0" }
 classical_solver = { path = "./classical_solver", version = "0.1.0" }
 
 [dev-dependencies]
-katex-doc = "*"
+katex-doc = "0.1.0"
 
 [dependencies.pyo3]
 version = "0.17"
