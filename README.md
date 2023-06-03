@@ -1,7 +1,7 @@
 # RustQUBO
 
 [![test](https://github.com/yasuo-ozu/rustqubo/actions/workflows/ci.yml/badge.svg)](//github.com/yasuo-ozu/rustqubo/actions/workflows/ci.yml)
-[![crates.io](https://img.shields.io/crates/v/rustqubo.svg)](//crates.io/rustqubo)
+[![crates.io](https://img.shields.io/crates/v/rustqubo.svg)](//crates.io/crates/rustqubo)
 
 RustQUBO is high-performance solver of constrainted optimization problem.
 It also supports manipulating logical constraints, optimization functions,
