@@ -26,12 +26,16 @@ jobs:
             V_PYPROJECT="$VER"
           done
           for CARGO_MANIFEST in $(find . -name Cargo.toml); do
-            V_CARGO="$(sed -ne 's/^version = "\(.*\)"$/\1/p' "$CARGO_MANIFEST" | head -n 1)"
             echo "Checking $CARGO_MANIFEST"
-            if [[ ! "$V_PYPROJECT" = "$V_CARGO" ]]; then
-              echo "Check failed. V_PYPROJECT=$V_PYPROJECT, V_CARGO=$V_CARGO" 1>&2
-              exit 1
-            fi
+            V_CARGO="$(sed -ne 's/^version = "\(.*\)"$/\1/p' "$CARGO_MANIFEST" | head -n 1)"
+            V_DEPS="$(sed -ne '/^\(annealers_dwave\>\|annealers\>\|classical_solver\>\|rustqubo\)/p' "$CARGO_MANIFEST" | sed -e 's/^.*\<version = "\(.*\)".*$/\1/')"
+            V_ALL="$(echo -e "$V_CARGO\n$V_DEPS")"
+            for VER in $(echo "$V_ALL"); do
+              if [[ ! "$V_PYPROJECT" = "$VER" ]]; then
+                echo "Check failed. $V_PYPROJECT != $VER" 1>&2
+                exit 1
+              fi
+            done
           done
           V_GIT="$(git describe --tags --abbrev=0 | head -n 1)"
           if [[ ! "v$V_PYPROJECT" = "$V_GIT" ]]; then
