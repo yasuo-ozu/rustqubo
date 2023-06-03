@@ -1,0 +1,49 @@
+name: "Setup poetry"
+description: "Setup cache and poetry"
+
+inputs:
+  python:
+    description: "Set python version like '3.10'"
+    required: false
+    default: ''
+  key:
+    description: "Set additional key for caching if needed"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/pypoetry/
+          ~/.local/share/virtualenv/
+          ~/.pyenv/
+          .venv
+          .pytest_cache
+          __pycache__
+          build
+          dist
+        key: ci-setuppoetry-${{runner.os}}-${{inputs.python}}-${{inputs.key}}-${{hashFiles('**/poetry.lock')}}
+        restore-keys: | 
+          ci-setuppoetry-${{runner.os}}-${{inputs.python}}-${{inputs.key}}-
+          ci-setuppoetry-${{runner.os}}-${{inputs.python}}-
+
+    - name: Install poetry
+      shell: bash
+      run: |
+        pip install --user poetry wheel
+        pip uninstall -y keyring
+
+    - name: Install python version ${{ inputs.python }}
+      uses: gabrielfalcao/pyenv-action@v11
+      if: inputs.python != ''
+      with:
+        default: ${{ inputs.python }}
+        command: |
+          pip install -U pip
+          poetry env use ${{ inputs.python }}
+          poetry install -vvv
+      env:
+        PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring

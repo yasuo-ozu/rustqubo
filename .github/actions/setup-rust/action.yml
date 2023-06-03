@@ -1,0 +1,42 @@
+name: "Setup rust"
+description: "Setup cache and toolchain"
+
+inputs:
+  toolchain:
+    description: "Set rust toolchain"
+    required: true
+  key:
+    description: "Set additional key for caching if needed"
+    required: false
+    default: ""
+  components:
+    description: "Additional components for active toolchain"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.rustup
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+          Cargo.lock
+        key: ci-setuprust-${{runner.os}}-${{inputs.toolchain}}-${{inputs.key}}-${{hashFiles('**/Cargo.lock')}}
+        restore-keys: | 
+          ci-setuprust-${{runner.os}}-${{inputs.toolchain}}-${{inputs.key}}-
+          ci-setuprust-${{runner.os}}-${{inputs.toolchain}}-
+
+    - name: Install toolchain ${{ inputs.toolchain }}
+      shell: bash
+      run: rustup install ${{ inputs.toolchain }} --profile minimal
+
+    - name: Install additional components
+      shell: bash
+      if: inputs.components != ''
+      run: rustup component add ${{ inputs.components }}

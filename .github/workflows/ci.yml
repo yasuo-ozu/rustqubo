@@ -1,0 +1,305 @@
+name: test
+on:
+  push:
+      branches: [ 'main', 'develop' ]
+  pull_request:
+  release:
+    types: ["published"]
+env:
+  PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - run: |
+          V_PYPROJECT=""
+          for VER in $(sed -ne 's/^version = "\(.*\)"$/\1/p' pyproject.toml); do
+            if [[ -n "$V_PYPROJECT" && "$V_PYPROJECT" != "$VER" ]]; then
+              echo "Check failed. $V_PYPROJECT != $VER" 1>&2
+              exit 1
+            fi
+            V_PYPROJECT="$VER"
+          done
+          for CARGO_MANIFEST in $(find . -name Cargo.toml); do
+            V_CARGO="$(sed -ne 's/^version = "\(.*\)"$/\1/p' "$CARGO_MANIFEST" | head -n 1)"
+            echo "Checking $CARGO_MANIFEST"
+            if [[ ! "$V_PYPROJECT" = "$V_CARGO" ]]; then
+              echo "Check failed. V_PYPROJECT=$V_PYPROJECT, V_CARGO=$V_CARGO" 1>&2
+              exit 1
+            fi
+          done
+          V_GIT="$(git describe --tags --abbrev=0 | head -n 1)"
+          if [[ ! "v$V_PYPROJECT" = "$V_GIT" ]]; then
+            echo "Check failed. V_PYPROJECT=$V_PYPROJECT, V_GIT=$V_GIT" 1>&2
+            exit 1
+          fi
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          toolchain: nightly
+          components: rustfmt clippy
+
+      - run: cargo fmt --all -- --check
+
+      - uses: giraffate/clippy-action@v1
+        with:
+          reporter: 'github-pr-review'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  bench:
+    needs: format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          toolchain: nightly
+
+      - name: Compile check for benches
+        run: cargo +nightly bench --no-run
+
+  test:
+    needs: format
+    strategy:
+      fail-fast:  false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        toolchain:
+          - stable
+          - nightly
+          - 1.51
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: install lacking commands on ubuntu
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          which sudo && sudo apt update
+          which sudo || apt update
+          which sudo && sudo apt install -y python3 git
+          which sudo || apt install -y python3 git
+          which sudo && [ -e "/usr/bin/python" ] || sudo ln -s /usr/bin/python3 /usr/bin/python
+          which sudo || [ -e "/usr/bin/python" ] || ln -s /usr/bin/python3 /usr/bin/python
+          
+      - name: check python3 installation
+        if: matrix.os == 'ubuntu-latest' 
+        run: which python3
+
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          toolchain: ${{ matrix.toolchain }}
+
+      - run: cargo test --verbose
+
+  publish:
+    needs: ["test", "bench", "check-version"]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          toolchain: stable
+
+      - name: Publish annealers
+        uses: katyo/publish-crates@v2
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          path: './annealers'
+          ignore-unpublished-changes: true
+
+      - name: Publish annealers-dwave
+        uses: katyo/publish-crates@v2
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          path: './annealers_dwave'
+          ignore-unpublished-changes: true
+
+      - name: Publish classical_solver
+        uses: katyo/publish-crates@v2
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          path: './classical_solver'
+          ignore-unpublished-changes: true
+
+      - name: Publish rustqubo
+        uses: katyo/publish-crates@v2
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          path: './rustqubo'
+          ignore-unpublished-changes: true
+
+  python-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-poetry
+        with:
+          python: 3.10
+
+      - run: poetry install -vvv
+
+      - run: poetry run isort . --check --diff
+      - run: poetry run black . --check
+      - run: poetry run flake8 --diff
+      - run: poetry run mypy .
+      - run: poetry run docformatter -c -r .
+
+  python-doc:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' 
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-poetry
+        with:
+          python: 3.10
+
+      - run: pip install --user sphinx
+
+      - run: poetry install -vvv
+
+      - run: poetry run sphinx-apidoc -F -o ./_build/doc/ ./rustqubo/
+
+      - run: make html
+        working-directory: ./_build/doc
+
+      - uses: actions/upload-pages-artifact@v1
+        with:
+          path: ./_build/doc/_build/html
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
+
+  python-test:
+    needs:
+      - python-format
+      - test
+    strategy:
+      fail-fast:  false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        python:
+          - 3.10
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-rust
+
+      - uses: ./.github/actions/setup-poetry
+        with:
+          python: ${{ matrix.python }}
+
+      - name: Install by pip
+        run: |
+          pip install --user . -vvv
+          mkdir _run_test && cd _run_test && python -c "import rustqubo" && cd ..
+          pip uninstall -y rustqubo
+
+      - run: poetry install -vvv
+
+      - run: poetry run pytest ./tests_py
+
+  python-wheel:
+    needs: ["python-test", "check-version"]
+    if: github.event_name == 'release'
+    strategy:
+      fail-fast: false
+      matrix:
+        os-arch: ["manylinux_x86_64", "win_amd64", "macosx_x86_64", "macosx_arm64"]
+        cibw-python: ["cp37", "cp38", "cp39", "cp310","cp311"]
+        exclude:
+          - cibw-python: "cp37"
+            os-arch: "macosx_arm64"
+        include:
+          - os-arch: "manylinux_x86_64"
+            os: "ubuntu-latest"
+          - os-arch: "win_amd64"
+            os: "windows-latest"
+          - os-arch: "macosx_x86_64"
+            os: "macos-latest"
+          - os-arch: "macosx_arm64"
+            os: "macos-latest"
+
+    runs-on: ${{ matrix.os }}
+    env:
+      CIBW_BUILD: ${{ matrix.cibw-python }}-${{ matrix.os-arch }}
+      TWINE_USERNAME: "__token__"
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-rust
+
+      - uses: ./.github/actions/setup-poetry
+        with:
+          python: 3.10
+
+      - name: Install Python dependencies
+        run: pip install cibuildwheel twine
+
+      - name: Run cibuildwheel
+        run: python -m cibuildwheel --output-dir wheels
+
+      - name: Upload wheel to GitHub
+        uses: actions/upload-artifact@v3
+        with:
+          path: ./wheels/*.whl
+
+      - name: Upload wheel data if the Git tag is set
+        run: python -m twine upload wheels/*.whl
+        env:
+          TWINE_PASSWORD: ${{ secrets.TWINE_API_TOKEN }}
+
+  python-sdist:
+    name: Source distribution
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    env:
+      TWINE_USERNAME: "__token__"
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-rust
+
+      - uses: ./.github/actions/setup-poetry
+        with:
+          python: 3.10
+
+      - name: Install Python dependencies
+        run: pip install twine build
+
+      - name: create sdist
+        run: poetry build --format=sdist -vvv
+
+      - name: Upload sdist data if the Git tag is set
+        run: python -m twine upload dist/*.tar.gz
+        env:
+          TWINE_PASSWORD: ${{ secrets.TWINE_API_TOKEN }}

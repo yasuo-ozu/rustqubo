@@ -1,0 +1,73 @@
+[project]
+name = "rustqubo"
+authors = [
+    {name = "Yasuo Ozu", email = "yasuo@ozu.email"},
+]
+maintainers = []
+version = "0.1.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.9"
+
+[tool.poetry]
+name = "rustqubo"
+version = "0.1.0"
+description = ""
+authors = ["Yasuo Ozu <yasuo@ozu.email>"]
+license = "MIT"
+readme = "README.md"
+include = [
+	"src/**/*",
+	"Cargo.toml",
+	"annealers/Cargo.toml",
+	"annealers/src/**/*",
+	"annealers_dwave/Cargo.toml",
+	"annealers_dwave/src/**/*",
+	"classical_solver/Cargo.toml",
+	"classical_solver/src/**/*",
+]
+exclude = [
+	"annealers/target/*",
+	"annealers_dwave/target/*",
+	"classical_solver/target/*",
+]
+
+[tool.poetry.build]
+# This is stub entry to force poetry generate 'setup.py'.
+# But actually it is not executed because 'setup.py' already exists.
+script = "README.md"
+# This should be true, to tell `poetry build` to execute 'setup.py'.
+generate-setup-file = true
+
+[tool.poetry.dependencies]
+python = ">=3.9"
+typing_extensions = "*"
+semantic_version = "*"
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.1.0"
+flake8 = "^4.0.1"
+mypy = ">=0.950"
+isort = "^5.10.1"
+pytest = "^7.1"
+docformatter = "^1.4,!=1.6.0"
+setuptools = "*"
+setuptools_rust = ">=1.6.0"
+
+[build-system]
+requires = ["setuptools", "setuptools_rust" , "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 88
+include = "rustqubo"
+
+[tool.isort]
+profile = "black"
+src_paths = "rustqubo"
+
+[tool.mypy]
+namespace_packages = true
+explicit_package_bases = true
+strict = true
+disallow_untyped_calls = false
