@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["yozu <yasuo@ozu.email>"]
 edition = "2018"
 license = "MIT"
+description = "A QUBO manipulation library for Rust"
 
 [features]
 default = ["python"]
