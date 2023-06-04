@@ -108,6 +108,8 @@ jobs:
         with:
           toolchain: ${{ matrix.toolchain }}
 
+      - run: cargo doc --no-deps
+
       - run: cargo test --verbose
 
   publish:
