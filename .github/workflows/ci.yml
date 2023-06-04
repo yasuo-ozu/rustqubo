@@ -234,7 +234,6 @@ jobs:
 
   python-wheel:
     needs: ["python-test", "check-version"]
-    if: github.event_name == 'release'
     strategy:
       fail-fast: false
       matrix:
@@ -277,7 +276,16 @@ jobs:
         with:
           path: ./wheels/*.whl
 
+      - run: rustup self uninstall
+
+      - run: |
+          pip install --user *.whl
+          python -c "import rustqubo"
+          pip uninstall -y rustqubo
+        working-directory:  wheels
+
       - name: Upload wheel data if the Git tag is set
+        if: github.event_name == 'release'
         run: python -m twine upload wheels/*.whl
         env:
           TWINE_PASSWORD: ${{ secrets.TWINE_API_TOKEN }}
