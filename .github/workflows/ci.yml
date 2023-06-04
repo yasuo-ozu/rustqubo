@@ -28,7 +28,7 @@ jobs:
           for CARGO_MANIFEST in $(find . -name Cargo.toml); do
             echo "Checking $CARGO_MANIFEST"
             V_CARGO="$(sed -ne 's/^version = "\(.*\)"$/\1/p' "$CARGO_MANIFEST" | head -n 1)"
-            V_DEPS="$(sed -ne '/^\(annealers_dwave\>\|annealers\>\|classical_solver\>\|rustqubo\)/p' "$CARGO_MANIFEST" | sed -e 's/^.*\<version = "\(.*\)".*$/\1/')"
+            V_DEPS="$(sed -ne '/^\(annealers\>\|classical_solver\>\|rustqubo\)/p' "$CARGO_MANIFEST" | sed -e 's/^.*\<version = "\(.*\)".*$/\1/')"
             V_ALL="$(echo -e "$V_CARGO\n$V_DEPS")"
             for VER in $(echo "$V_ALL"); do
               if [[ ! "$V_PYPROJECT" = "$VER" ]]; then
@@ -126,13 +126,6 @@ jobs:
         with:
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
           path: './annealers'
-          ignore-unpublished-changes: true
-
-      - name: Publish annealers-dwave
-        uses: katyo/publish-crates@v2
-        with:
-          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-          path: './annealers_dwave'
           ignore-unpublished-changes: true
 
       - name: Publish classical_solver

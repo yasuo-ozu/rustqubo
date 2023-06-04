@@ -9,3 +9,5 @@ output/
 /rustqubo/*.so
 /rustqubo/*.dylib
 /rustqubo/*.lib
+/annealers/target/
+/classical_solver/target/

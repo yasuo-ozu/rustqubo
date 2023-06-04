@@ -3,9 +3,6 @@ include Cargo.toml
 include annealers/Cargo.toml
 include annealers/src/**/*
 exclude annealers/target/*
-include annealers_dwave/Cargo.toml
-include annealers_dwave/src/**/*
-exclude annealers_dwave/target/*
 include classical_solver/Cargo.toml
 include classical_solver/src/**/*
 exclude classical_solver/target/*

@@ -18,7 +18,6 @@ This project is founded by MITOU TARGET project in 2020.
 - [Documentation (rustqubo)](//docs.rs/rustqubo/latest/rustqubo)
 - [Documentation (classical_solver)](//docs.rs/classical_solver/latest/classical_solver)
 - [Documentation (annealers)](//docs.rs/annealers/latest/annealers)
-- [Documentation (annealers_dwave)](//docs.rs/annealers_dwave/latest/annealers_dwave)
 
 ### Documentation for Python API
 - [Documentation (rustqubo)](//yasuo-ozu.github.io/rustqubo/)

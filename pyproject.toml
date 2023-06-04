@@ -21,14 +21,11 @@ include = [
 	"Cargo.toml",
 	"annealers/Cargo.toml",
 	"annealers/src/**/*",
-	"annealers_dwave/Cargo.toml",
-	"annealers_dwave/src/**/*",
 	"classical_solver/Cargo.toml",
 	"classical_solver/src/**/*",
 ]
 exclude = [
 	"annealers/target/*",
-	"annealers_dwave/target/*",
 	"classical_solver/target/*",
 ]
 
